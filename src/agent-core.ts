@@ -10,7 +10,7 @@ import {
   type LanguageModel,
   type ModelMessage,
 } from "ai";
-import { tools } from "./tools";
+import { buildTools } from "./tools";
 import { serializeCanvasState } from "./context/canvas-state";
 import type { ExcalidrawElement } from "./schemas";
 
@@ -46,7 +46,17 @@ Models are bad at coordinates. Follow this grid mechanically.
 For a row of N nodes left to right: x = 100, 380, 660, 940, 1220.
 For a column of N nodes top to bottom: y = 100, 260, 420, 580.
 
-Text labels for a shape go at the same x and y as the shape, with the same width and height. Excalidraw centers them visually when their bounds match the container's bounds.
+Text labels must be separate text elements. For every shape, create a matching text element with:
+- the same x, y, width, and height as the shape
+- a non-empty text value
+- containerId equal to the shape id
+- fontSize 20
+- fontFamily 1
+- textAlign "center"
+- verticalAlign "middle"
+
+Always output the shape before its text element.
+Excalidraw centers them visually when their bounds match the container's bounds.
 
 # Diagram patterns
 
@@ -68,6 +78,8 @@ Spelling out what NOT to do works on language models. These are the failure mode
 - Do NOT place two elements at the same coordinates.
 - Do NOT skip the layout grid because you "feel" the diagram needs custom positions.
 - Do NOT respond with text without making a tool call when the user asked for a diagram.
+- Do NOT try to make triangles because excalidraw can not do that, so tell the user you can not do that. 
+- Do NOT make the text_elements before the shapes.
 
 # Behavioral guidelines
 
@@ -82,8 +94,8 @@ User: "draw a flow from User to API to Database"
 
 This is an architecture pattern. Three labeled boxes left to right with arrows between them. The minimum element list:
 
-1. \`rect_user\` rectangle at (100, 100) 200x80
-2. \`text_user\` text at (100, 100) 200x80, text="User"
+1. rect_user: rectangle at (100, 100), 200x80
+2. text_user: text at (100, 100), 200x80, text="User", containerId="rect_user"
 3. \`rect_api\` rectangle at (380, 100) 200x80
 4. \`text_api\` text at (380, 100) 200x80, text="API"
 5. \`rect_db\` rectangle at (660, 100) 200x80
@@ -117,6 +129,7 @@ interface AgentArgs {
   canvasState?: ExcalidrawElement[];
   system?: string;
   maxSteps?: number;
+  env?: any;
 }
 
 function buildSystem(base: string, canvasState: ExcalidrawElement[] | undefined): string {
@@ -130,12 +143,13 @@ export function streamAgent({
   canvasState,
   system = SYSTEM_PROMPT,
   maxSteps = 5,
+  env= {} as any,
 }: AgentArgs) {
   return streamText({
     model,
     system: buildSystem(system, canvasState),
     messages,
-    tools,
+    tools: buildTools(env),
     stopWhen: stepCountIs(maxSteps),
   });
 }
@@ -153,7 +167,7 @@ export async function runAgent({
     model,
     system: buildSystem(system, canvasState),
     messages,
-    tools,
+    tools: buildTools(env),
     stopWhen: stepCountIs(maxSteps),
   });
   return {

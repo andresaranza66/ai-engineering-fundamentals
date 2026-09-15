@@ -7,13 +7,6 @@ import type { ExcalidrawElement } from "./schemas";
 interface Env extends Cloudflare.Env {
   OPENAI_API_KEY: string;
 }
-
-// Pull canvas state out of the user's just-arrived message. The client
-// attaches it as a `data-canvas-state` part on every outgoing message via
-// App.tsx — that's the only way to send extra payload alongside a message
-// in the Cloudflare AI Chat protocol, since useAgentChat / AIChatAgent only
-// understand UIMessage on the wire. onChatMessage runs because the user
-// sent a message, so the last message in the array is always theirs.
 type CanvasStatePart = {
   type: "data-canvas-state";
   data: { elements: ExcalidrawElement[] };
@@ -38,7 +31,8 @@ export class DesignAgent extends AIChatAgent<Env> {
     const result = streamAgent({
       model,
       messages,
-      canvasState,
+     // canvasState,
+      env: {TAVILY_API_KEY: this.env.TAVILY_API_KEY}
     });
 
     return result.toUIMessageStreamResponse();
