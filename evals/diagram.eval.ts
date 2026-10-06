@@ -24,6 +24,11 @@ import { labelKeywordScorer } from "./scorers/labelKeyword";
 // artifact quality, which is lesson 8's subject. Lesson 8 starts by wiring
 // them into this file.
 
+import {boundArrowsScorer} from "./scorers/boundArrows";
+import {boundLabelsScorer} from "./scorers/boundLabels";
+import {connectivityScorer} from "./scorers/connectivity"
+
+
 config({ path: ".dev.vars" });
 
 const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -63,5 +68,8 @@ Eval<GoldenTestCase, AgentOutput, GoldenTestCase>("Diagram Agent", {
     structureScorer,
     toolChoiceScorer,
     labelKeywordScorer,
+    boundArrowsScorer,
+    boundLabelsScorer,
+    connectivityScorer,
   ],
 });
